@@ -13,6 +13,21 @@ struct ImagemInterna{
     vector<unsigned char> pixels; //R, G, B de cada pixel
 };
 
+string pegarValor(string json, string nome) {
+    string search = "\"" + nome + "\":";
+
+    int inicio = json.find(search);
+    if (inicio == -1) {
+        return "Nome não encontrado";
+    }
+
+    inicio = inicio+search.length();
+    if (json[inicio] == '"') {
+        inicio++;
+        int fim = json.find('"', inicio);
+        return json.subtr(inicio, fim - inicio);
+    }
+}
 //funcao para recortar a imagem
 ImagemInterna corta(ImagemInterna original, int x, int y, int novaLargura, int novaAltura)
 {
@@ -38,12 +53,18 @@ ImagemInterna corta(ImagemInterna original, int x, int y, int novaLargura, int n
     return recorte;
 }
 
+//Função para leitura de cores
+
 int main()
 {
     //setar caracteres em portugues
     setlocale(LC_ALL, "");
 
     //[INPUT]
+
+
+
+
 
     string nomeArquivo;
     cout << "Digite o nome do arquivo BMP: " << endl;
