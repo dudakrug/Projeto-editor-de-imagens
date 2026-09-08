@@ -45,10 +45,17 @@ int main()
 
     //[INPUT]
 
-    //POLIR ESTA MERDA
     string nomeArquivo;
     cout << "Digite o nome do arquivo BMP: " << endl;
     getline(cin, nomeArquivo);
+
+    int novaAltura, novaLargura;
+    cout << "--Configuracoes de recorte--" << endl;
+    cout << "Digite a nova altura da imagem: " << endl;
+    cin >> novaAltura;
+
+    cout << "Digite a nova largura da imagem: " << endl;
+    cin >> novaLargura;
 
     //[PROCESS]
 
@@ -69,7 +76,7 @@ int main()
     ImagemInterna imagemCopia = imagemOriginal;
 
     //valores ficticios para teste
-    ImagemInterna imagemRecortada = corta(imagemCopia, 10, 10, 100, 100);
+    ImagemInterna imagemRecortada = corta(imagemCopia, 10, 10, novaLargura, novaAltura);
 
     return 0;
 }
