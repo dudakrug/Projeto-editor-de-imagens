@@ -25,9 +25,33 @@ string pegarValor(string json, string nome) {
     if (json[inicio] == '"') {
         inicio++;
         int fim = json.find('"', inicio);
-        return json.subtr(inicio, fim - inicio);
+        return json.substr(inicio, fim - inicio);
     }
 }
+
+//funcao para ler o json linha por linha do arquivo txt
+string lerArquivoJson(string caminhoArquivo){
+    ifstream arquivo(caminhoArquivo);
+
+    if(!arquivo.is_open()){
+        cerr << "Erro: arquivo nao encontrado" << endl;
+    }
+
+    string conteudo = "";
+    string linha;
+
+    //guarda linha por linha do arquivo em uma string
+    while(getline(arquivo, linha)){
+        conteudo += linha;
+    }
+
+    //fechar o arquivo depois de terminar a leitura 
+    arquivo.close();
+
+    return conteudo;
+}
+
+
 //funcao para recortar a imagem
 ImagemInterna corta(ImagemInterna original, int x, int y, int novaLargura, int novaAltura)
 {
@@ -61,10 +85,7 @@ int main()
     setlocale(LC_ALL, "");
 
     //[INPUT]
-
-
-
-
+    string json = lerArquivoJson("nome.txt");
 
     string nomeArquivo;
     cout << "Digite o nome do arquivo BMP: " << endl;
@@ -80,18 +101,8 @@ int main()
 
     //[PROCESS]
 
-    //funcao para ler o arquivo em binario
-    ifstream arquivo(nomeArquivo, ios::in | ios::binary);
-
-    if(!arquivo.is_open()){
-        cerr << "Nao foi possivel ler o arquivo!" << endl;
-        return -1;
-    }
-
     //cria a imagem original
     ImagemInterna imagemOriginal;
-
-    arquivo.close();
 
     //cria a copia da imagem original
     ImagemInterna imagemCopia = imagemOriginal;
