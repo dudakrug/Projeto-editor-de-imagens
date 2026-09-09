@@ -13,6 +13,20 @@ struct ImagemInterna{
     vector<unsigned char> pixels; //R, G, B de cada pixel
 };
 
+void ConvGrey() {
+    for (int i = 0; i< pixels.size(); i++) {
+        unsigned char R = pixels[i];
+        unsigned char G = pixels[i + 1];
+        unsigned char B = pixels[i + 2];
+
+        unsigned char gray = 0.30 * R + 0.59 * G + 0.11 * B;
+
+        pixels[i] = gray;
+        pixels[i + 1] = gray;
+        pixels[i + 2] = gray;
+    }
+}
+
 string pegarValor(string json, string nome) {
     string search = "\"" + nome + "\":";
 
@@ -45,7 +59,7 @@ string lerArquivoJson(string caminhoArquivo){
         conteudo += linha;
     }
 
-    //fechar o arquivo depois de terminar a leitura 
+    //fechar o arquivo depois de terminar a leitura
     arquivo.close();
 
     return conteudo;
