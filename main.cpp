@@ -9,8 +9,7 @@ using namespace std;
 
 #pragma pack(push, 1)
 
-struct CabecalhoBMP
-{
+struct CabecalhoBMP{
     uint16_t tipo;
     uint32_t tamanhoArquivo;
     uint16_t reservado1;
@@ -18,8 +17,7 @@ struct CabecalhoBMP
     uint32_t offset;
 };
 
-struct CabecalhoImagem
-{
+struct CabecalhoImagem{
     uint32_t tamanho;
     int32_t largura;
     int32_t altura;
@@ -36,8 +34,7 @@ struct CabecalhoImagem
 #pragma pack(pop)
 
 // struct para armazenar as informacoes da imagem
-struct ImagemInterna
-{
+struct ImagemInterna{
     int largura;
     int altura;
     vector<unsigned char> pixels;
@@ -106,16 +103,14 @@ string LerArquivoJson(string caminhoArquivo)
 {
     ifstream arquivo(caminhoArquivo);
 
-    if (!arquivo.is_open())
-    {
+    if (!arquivo.is_open()){
         cerr << "Erro: arquivo nao encontrado" << endl;
     }
 
     string conteudo = "";
     string linha;
 
-    while (getline(arquivo, linha))
-    {
+    while (getline(arquivo, linha)){
         conteudo += linha;
     }
 
@@ -218,9 +213,85 @@ ImagemInterna AbrirImagem(string json, ImagemInterna imagemOriginal){
     return imagemOriginal;
 }
 
+//funcao para gravar a imagem
+void GravaBMP(ImagemInterna imagem, string nomeArquivo){
+
+    //escrever dados do arquivo BMP
+    ofstream arquivoImagem(nomeArquivo, ios::out | ios::binary);
+
+    if (!arquivoImagem.is_open()){
+        cerr << "Erro: nao foi possivel criar o arquivo " << nomeArquivo << endl;
+        exit(1);
+    }
+
+    int larguraBytes = imagem.largura * 3;
+    // garantir que cada linha de pixels no arquivo BMP ocupe um número de bytes múltiplo de 4
+    int padding = (4 - (larguraBytes % 4)) % 4;
+    int tamanhoDados = (larguraBytes + padding) * imagem.altura;
+    int tamanhoArquivo = 54 + tamanhoDados;
+
+    // cabecalho inteiro (54 bytes) guardado num vetor, comecando zerado
+    vector<unsigned char> cabecalho(54, 0);
+
+    cabecalho[0] = 'B';
+    cabecalho[1] = 'M';
+
+    // tamanho do arquivo (posicoes 2 a 5)
+    for (int i = 0; i < 4; i++){
+        cabecalho[2 + i] = (tamanhoArquivo >> (i * 8)) & 0xFF;
+    }
+
+    // offset dos dados (posicoes 10 a 13)
+    cabecalho[10] = 54;
+
+    // tamanho do segundo cabecalho (posicoes 14 a 17)
+    cabecalho[14] = 40;
+
+    // largura (posicoes 18 a 21)
+    for (int i = 0; i < 4; i++){
+        cabecalho[18 + i] = (imagem.largura >> (i * 8)) & 0xFF;
+    }
+
+    // altura (posicoes 22 a 25)
+    for (int i = 0; i < 4; i++){
+        cabecalho[22 + i] = (imagem.altura >> (i * 8)) & 0xFF;
+    }
+
+    // planos (posicoes 26-27)
+    cabecalho[26] = 1;
+
+    // bits por pixel (posicoes 28-29)
+    cabecalho[28] = 24;
+
+    // tamanho da imagem em bytes (posicoes 34 a 37)
+    for (int i = 0; i < 4; i++){
+        cabecalho[34 + i] = (tamanhoDados >> (i * 8)) & 0xFF;
+    }
+
+    // (compressao, resolucoes e cores ficam 0, ja que o vetor comecou zerado)
+
+    // escreve o cabecalho inteiro
+    for (int i = 0; i < cabecalho.size(); i++)
+        arquivoImagem.put(cabecalho[i]);
+
+    // escreve os pixels
+    for (int linha = 0; linha < imagem.altura; linha++)
+    {
+        for (int i = 0; i < larguraBytes; i++)
+            arquivoImagem.put(imagem.pixels[linha * larguraBytes + i]);
+
+        for (int i = 0; i < padding; i++)
+            arquivoImagem.put(0);
+    }
+
+    arquivoImagem.close();
+
+    cerr << "Arquivo " << nomeArquivo << " gravado com sucesso." << endl;
+}
+
 int main()
 {
-    setlocale(LC_ALL, "");
+    setlocale(LC_ALL, "portuguese");
 
     //leitura do json
     string json = LerArquivoJson("comandos.mpi");
@@ -235,35 +306,29 @@ int main()
         imagemOriginal = AbrirImagem(json, imagemOriginal);
     }
 
-
-    if (comando == "Recorta")
-    {
-        ImagemInterna imagemRecortada = Corta(
+    if (comando == "Recorta"){
+        ImagemInterna imagemRecortada;
+        imagemRecortada = Corta(
             imagemOriginal, //arquivo
             100,   // x
             50,    // y
             300,   // largura
             150    // altura
-        );
+            );
     }
-    if (comando == "GravaBMP")
-    {
+
+    if (comando == "GravaBMP"){
         GravaBMP(imagemRecortada, "recorte.bmp");
     }
 
-
     // Comando ConvGray
-    if (comando == "ConvGray")
-    {
+    if (comando == "ConvGray"){
         ImagemInterna imagemCinza = imagemRecortada;
-
         imagemCinza = ConvGrey(imagemCinza);
     }
 
-
     // Comando GravaBMP novamente
-    if (comando == "GravaBMP")
-    {
+    if (comando == "GravaBMP"){
         GravaBMP(imagemCinza, "recorte_cinza.bmp");
     }
 
