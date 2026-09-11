@@ -3,6 +3,7 @@
 #include <string>
 #include <locale>
 #include <vector>
+#include <cstdint>
 
 using namespace std;
 
@@ -34,7 +35,6 @@ struct CabecalhoImagem
 
 #pragma pack(pop)
 
-
 // struct para armazenar as informacoes da imagem
 struct ImagemInterna
 {
@@ -43,9 +43,8 @@ struct ImagemInterna
     vector<unsigned char> pixels;
 };
 
-//conv gray
-
-void ConvGrey(ImagemInterna imagem)
+//funcao para converter a imagem para tons de cinza
+ImagemInterna ConvGrey(ImagemInterna imagem)
 {
     for (int i = 0; i < imagem.pixels.size(); i += 3)
     {
@@ -59,11 +58,12 @@ void ConvGrey(ImagemInterna imagem)
         imagem.pixels[i + 1] = gray;
         imagem.pixels[i + 2] = gray;
     }
+
+    return imagem;
 }
 
-//Pegando valor json
-
-string pegarValor(string json, string nome)
+//funcao para pegar valores do arquivo json
+string PegarValorJson(string json, string nome)
 {
     string procurar = "\"" + nome + "\":";
 
@@ -100,9 +100,9 @@ string pegarValor(string json, string nome)
 
     return json.substr(inicio, fim - inicio);
 }
-//lendo json
 
-string lerArquivoJson(string caminhoArquivo)
+//funcao para ler o arquivo json
+string LerArquivoJson(string caminhoArquivo)
 {
     ifstream arquivo(caminhoArquivo);
 
@@ -124,10 +124,8 @@ string lerArquivoJson(string caminhoArquivo)
     return conteudo;
 }
 
-//recorte da imagem
-
-ImagemInterna corta(ImagemInterna original, int x, int y,
-                    int novaLargura, int novaAltura)
+//funcao para recortar a imagem
+ImagemInterna Corta(ImagemInterna original, int x, int y, int novaLargura, int novaAltura)
 {
     ImagemInterna recorte;
 
@@ -154,117 +152,94 @@ ImagemInterna corta(ImagemInterna original, int x, int y,
     return recorte;
 }
 
+//funcao para abrir a imagem
+ImagemInterna AbrirImagem(string json, ImagemInterna imagemOriginal){
+
+    string nomeArquivo = PegarValorJson(json, "arq");
+
+    ifstream arquivoImagem;
+    arquivoImagem.open(nomeArquivo, ios::in | ios::binary);
+
+    if (!arquivoImagem.is_open()){
+        cerr << "Erro: nao foi possivel abrir a imagem" << endl;
+        exit(1);
+    }
+
+    //leitura dos cabecalhos
+    CabecalhoBMP cabecalhoBMP;
+    CabecalhoImagem cabecalhoImagem;
+
+    //pula os 14 bytes do primeiro cabecalho
+    for (int i = 0; i < 14; i++){
+        arquivoImagem.get();
+    }
+    //pula o tamanho do segundo cabecalho
+    for (int i = 0; i < 4; i++){
+        arquivoImagem.get();
+    }
+
+    //funcao para ler a largura
+    cabecalhoImagem.largura = 0;
+
+    for (int i = 0; i < 4; i++){
+        cabecalhoImagem.largura += arquivoImagem.get() << (i * 8);
+    }
+
+    //funcao para ler a altura
+    cabecalhoImagem.altura = 0;
+
+    for (int i = 0; i < 4; i++){
+        cabecalhoImagem.altura += arquivoImagem.get() << (i * 8);
+    }
+
+    //pula planos e bits por pixel
+    for (int i = 0; i < 4; i++){
+        arquivoImagem.get();
+    }
+
+    //pula o restante do cabecalho
+    for (int i = 0; i < 24; i++){
+        arquivoImagem.get();
+    }
+
+    //Tranformando a imagem original
+    imagemOriginal.largura = cabecalhoImagem.largura;
+    imagemOriginal.altura = cabecalhoImagem.altura;
+
+    imagemOriginal.pixels.resize(imagemOriginal.largura * imagemOriginal.altura * 3);
+
+    //Lendo os pixels
+    for (int i = 0; i < imagemOriginal.pixels.size(); i++){
+        imagemOriginal.pixels[i] = arquivoImagem.get();
+    }
+
+    arquivoImagem.close();
+
+    return imagemOriginal;
+}
 
 int main()
 {
     setlocale(LC_ALL, "");
 
     //leitura do json
+    string json = LerArquivoJson("comandos.mpi");
 
-    string json = lerArquivoJson("comandos.mpi");
-
-    //Pegando os cmd's
-
-    string comando = pegarValor(json, "cmd");
-
+    //separar os valores de cmd´s do arquivo json
+    string comando = PegarValorJson(json, "cmd");
 
     ImagemInterna imagemOriginal;
 
-
     //Abrindo a imagem
-    if (comando == "Abra")
-    {
-        string nomeArquivo =
-            pegarValor(json, "arq");
-
-        ifstream arquivoImagem;
-
-        arquivoImagem.open(
-            nomeArquivo,
-            ios::in | ios::binary
-        );
-
-        if (!arquivoImagem.is_open())
-        {
-            cerr << "Erro: nao foi possivel abrir a imagem" << endl;
-            return -1;
-        }
-
-        //Leitura do cabecalho
-        CabecalhoBMP cabecalho;
-        CabecalhoImagem cabecalhoImagem;
-
-
-        // pula os 14 bytes do primeiro cabecalho
-        for (int i = 0; i < 14; i++)
-            arquivoImagem.get();
-
-
-        // pula o tamanho do segundo cabecalho
-        for (int i = 0; i < 4; i++)
-            arquivoImagem.get();
-
-
-        //Funcao para ler largura
-        cabecalhoImagem.largura = 0;
-
-        for (int i = 0; i < 4; i++)
-        {
-            cabecalhoImagem.largura +=
-                arquivoImagem.get() << (i * 8);
-        }
-
-        //Funcao de leitura da altura
-        cabecalhoImagem.altura = 0;
-
-        for (int i = 0; i < 4; i++)
-        {
-            cabecalhoImagem.altura +=
-                arquivoImagem.get() << (i * 8);
-        }
-
-
-        // pula planos e bits por pixel
-        for (int i = 0; i < 4; i++)
-            arquivoImagem.get();
-
-
-        // pula o restante do cabecalho
-        for (int i = 0; i < 24; i++)
-            arquivoImagem.get();
-
-
-        //Tranformando a imagem original
-        imagemOriginal.largura =
-            cabecalhoImagem.largura;
-
-        imagemOriginal.altura =
-            cabecalhoImagem.altura;
-
-
-        imagemOriginal.pixels.resize(
-            imagemOriginal.largura *
-            imagemOriginal.altura *
-            3
-        );
-
-
-    //Lendo os pixels
-        for (int i = 0; i < imagemOriginal.pixels.size(); i++)
-        {
-            imagemOriginal.pixels[i] =
-                arquivoImagem.get();
-        }
-
-
-        arquivoImagem.close();
+    if (comando == "Abra"){
+        imagemOriginal = AbrirImagem(json, imagemOriginal);
     }
 
-    //Funcao para recorte
+
     if (comando == "Recorta")
     {
-        ImagemInterna imagemRecortada = corta(
-            imagemOriginal,
+        ImagemInterna imagemRecortada = Corta(
+            imagemOriginal, //arquivo
             100,   // x
             50,    // y
             300,   // largura
@@ -282,7 +257,7 @@ int main()
     {
         ImagemInterna imagemCinza = imagemRecortada;
 
-        imagemCinza = ConvGray(imagemCinza);
+        imagemCinza = ConvGrey(imagemCinza);
     }
 
 
