@@ -1,0 +1,22 @@
+[
+    {
+        "cmd1": "Abra",
+        "arq": "bolas_coloridas.bmp"
+    },
+    {
+        "cmd2": "Recorta",
+        "ini": [100, 50],
+        "tam": [300, 150]
+    },
+    {
+        "cmd3": "GravaBMP",
+        "arq": "recorte.bmp"
+    },
+    {
+        "cmd4": "ConvGray"
+    },
+    {
+        "cmd5": "GravaBMP",
+        "arq": "recorte_cinza.bmp"
+    }
+]

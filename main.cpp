@@ -3,13 +3,13 @@
 #include <string>
 #include <locale>
 #include <vector>
+#include <cstdint>
 
 using namespace std;
 
 #pragma pack(push, 1)
 
-struct CabecalhoBMP
-{
+struct CabecalhoBMP{
     uint16_t tipo;
     uint32_t tamanhoArquivo;
     uint16_t reservado1;
@@ -17,8 +17,7 @@ struct CabecalhoBMP
     uint32_t offset;
 };
 
-struct CabecalhoImagem
-{
+struct CabecalhoImagem{
     uint32_t tamanho;
     int32_t largura;
     int32_t altura;
@@ -34,18 +33,15 @@ struct CabecalhoImagem
 
 #pragma pack(pop)
 
-
 // struct para armazenar as informacoes da imagem
-struct ImagemInterna
-{
+struct ImagemInterna{
     int largura;
     int altura;
     vector<unsigned char> pixels;
 };
 
-//conv gray
-
-void ConvGrey(ImagemInterna imagem)
+//funcao para converter a imagem para tons de cinza
+ImagemInterna ConvGrey(ImagemInterna imagem)
 {
     for (int i = 0; i < imagem.pixels.size(); i += 3)
     {
@@ -59,11 +55,12 @@ void ConvGrey(ImagemInterna imagem)
         imagem.pixels[i + 1] = gray;
         imagem.pixels[i + 2] = gray;
     }
+
+    return imagem;
 }
 
-//Pegando valor json
-
-string pegarValor(string json, string nome)
+//funcao para pegar valores do arquivo json
+string PegarValorJson(string json, string nome)
 {
     string procurar = "\"" + nome + "\":";
 
@@ -100,22 +97,20 @@ string pegarValor(string json, string nome)
 
     return json.substr(inicio, fim - inicio);
 }
-//lendo json
 
-string lerArquivoJson(string caminhoArquivo)
+//funcao para ler o arquivo json
+string LerArquivoJson(string caminhoArquivo)
 {
     ifstream arquivo(caminhoArquivo);
 
-    if (!arquivo.is_open())
-    {
+    if (!arquivo.is_open()) {
         cerr << "Erro: arquivo nao encontrado" << endl;
+        exit(1);
     }
-
     string conteudo = "";
     string linha;
 
-    while (getline(arquivo, linha))
-    {
+    while (getline(arquivo, linha)){
         conteudo += linha;
     }
 
@@ -124,10 +119,8 @@ string lerArquivoJson(string caminhoArquivo)
     return conteudo;
 }
 
-//recorte da imagem
-
-ImagemInterna corta(ImagemInterna original, int x, int y,
-                    int novaLargura, int novaAltura)
+//funcao para recortar a imagem
+ImagemInterna Corta(ImagemInterna original, int x, int y, int novaLargura, int novaAltura)
 {
     ImagemInterna recorte;
 
@@ -154,143 +147,197 @@ ImagemInterna corta(ImagemInterna original, int x, int y,
     return recorte;
 }
 
+//funcao para abrir a imagem
+ImagemInterna AbrirImagem(string json, ImagemInterna imagemOriginal){
+
+    string nomeArquivo = PegarValorJson(json, "arq");
+
+    ifstream arquivoImagem;
+    arquivoImagem.open(nomeArquivo, ios::in | ios::binary);
+
+    if (!arquivoImagem.is_open()){
+        cerr << "Erro: nao foi possivel abrir a imagem" << endl;
+        exit(1);
+    }
+
+    //leitura dos cabecalhos
+    CabecalhoBMP cabecalhoBMP;
+    CabecalhoImagem cabecalhoImagem;
+
+    //pula os 14 bytes do primeiro cabecalho
+    for (int i = 0; i < 14; i++){
+        arquivoImagem.get();
+    }
+    //pula o tamanho do segundo cabecalho
+    for (int i = 0; i < 4; i++){
+        arquivoImagem.get();
+    }
+
+    //funcao para ler a largura
+    cabecalhoImagem.largura = 0;
+
+    for (int i = 0; i < 4; i++){
+        cabecalhoImagem.largura += arquivoImagem.get() << (i * 8);
+    }
+
+    //funcao para ler a altura
+    cabecalhoImagem.altura = 0;
+
+    for (int i = 0; i < 4; i++){
+        cabecalhoImagem.altura += arquivoImagem.get() << (i * 8);
+    }
+
+    //pula planos e bits por pixel
+    for (int i = 0; i < 4; i++){
+        arquivoImagem.get();
+    }
+
+    //pula o restante do cabecalho
+    for (int i = 0; i < 24; i++){
+        arquivoImagem.get();
+    }
+
+    //Tranformando a imagem original
+    imagemOriginal.largura = cabecalhoImagem.largura;
+    imagemOriginal.altura = cabecalhoImagem.altura;
+
+    imagemOriginal.pixels.resize(imagemOriginal.largura * imagemOriginal.altura * 3);
+
+    //Lendo os pixels
+    for (int i = 0; i < imagemOriginal.pixels.size(); i++){
+        imagemOriginal.pixels[i] = arquivoImagem.get();
+    }
+
+    arquivoImagem.close();
+
+    return imagemOriginal;
+}
+
+//funcao para gravar a imagem
+void GravaBMP(ImagemInterna imagem, string nomeArquivo){
+
+    //escrever dados do arquivo BMP
+    ofstream arquivoImagem(nomeArquivo, ios::out | ios::binary);
+
+    if (!arquivoImagem.is_open()){
+        cerr << "Erro: nao foi possivel criar o arquivo " << nomeArquivo << endl;
+        exit(1);
+    }
+
+    int larguraBytes = imagem.largura * 3;
+    // garantir que cada linha de pixels no arquivo BMP ocupe um número de bytes múltiplo de 4
+    int padding = (4 - (larguraBytes % 4)) % 4;
+    int tamanhoDados = (larguraBytes + padding) * imagem.altura;
+    int tamanhoArquivo = 54 + tamanhoDados;
+
+    // cabecalho inteiro (54 bytes) guardado num vetor, comecando zerado
+    vector<unsigned char> cabecalho(54, 0);
+
+    cabecalho[0] = 'B';
+    cabecalho[1] = 'M';
+
+    // tamanho do arquivo (posicoes 2 a 5)
+    for (int i = 0; i < 4; i++){
+        cabecalho[2 + i] = (tamanhoArquivo >> (i * 8)) & 0xFF;
+    }
+
+    // offset dos dados (posicoes 10 a 13)
+    cabecalho[10] = 54;
+
+    // tamanho do segundo cabecalho (posicoes 14 a 17)
+    cabecalho[14] = 40;
+
+    // largura (posicoes 18 a 21)
+    for (int i = 0; i < 4; i++){
+        cabecalho[18 + i] = (imagem.largura >> (i * 8)) & 0xFF;
+    }
+
+    // altura (posicoes 22 a 25)
+    for (int i = 0; i < 4; i++){
+        cabecalho[22 + i] = (imagem.altura >> (i * 8)) & 0xFF;
+    }
+
+    // planos (posicoes 26-27)
+    cabecalho[26] = 1;
+
+    // bits por pixel (posicoes 28-29)
+    cabecalho[28] = 24;
+
+    // tamanho da imagem em bytes (posicoes 34 a 37)
+    for (int i = 0; i < 4; i++){
+        cabecalho[34 + i] = (tamanhoDados >> (i * 8)) & 0xFF;
+    }
+
+    // (compressao, resolucoes e cores ficam 0, ja que o vetor comecou zerado)
+
+    // escreve o cabecalho inteiro
+    for (int i = 0; i < cabecalho.size(); i++)
+        arquivoImagem.put(cabecalho[i]);
+
+    // escreve os pixels
+    for (int linha = 0; linha < imagem.altura; linha++)
+    {
+        for (int i = 0; i < larguraBytes; i++)
+            arquivoImagem.put(imagem.pixels[linha * larguraBytes + i]);
+
+        for (int i = 0; i < padding; i++)
+            arquivoImagem.put(0);
+    }
+
+    arquivoImagem.close();
+
+    cerr << "Arquivo " << nomeArquivo << " gravado com sucesso." << endl;
+}
 
 int main()
 {
-    setlocale(LC_ALL, "");
+    setlocale(LC_ALL, "portuguese");
 
     //leitura do json
+    string json = LerArquivoJson("comandos.mpi");
 
-    string json = lerArquivoJson("comandos.mpi");
-
-    //Pegando os cmd's
-
-    string comando = pegarValor(json, "cmd");
-
+    //separar os valores de cmd´s do arquivo json
+    string comando1 = PegarValorJson(json, "cmd1");
+    string comando2 = PegarValorJson(json, "cmd2");
+    string comando3 = PegarValorJson(json, "cmd3");
+    string comando4 = PegarValorJson(json, "cmd4");
+    string comando5 = PegarValorJson(json, "cmd5");
 
     ImagemInterna imagemOriginal;
-
+    ImagemInterna imagemRecortada;
+    ImagemInterna imagemCinza;
 
     //Abrindo a imagem
-    if (comando == "Abra")
-    {
-        string nomeArquivo =
-            pegarValor(json, "arq");
-
-        ifstream arquivoImagem;
-
-        arquivoImagem.open(
-            nomeArquivo,
-            ios::in | ios::binary
-        );
-
-        if (!arquivoImagem.is_open())
-        {
-            cerr << "Erro: nao foi possivel abrir a imagem" << endl;
-            return -1;
-        }
-
-        //Leitura do cabecalho
-        CabecalhoBMP cabecalho;
-        CabecalhoImagem cabecalhoImagem;
-
-
-        // pula os 14 bytes do primeiro cabecalho
-        for (int i = 0; i < 14; i++)
-            arquivoImagem.get();
-
-
-        // pula o tamanho do segundo cabecalho
-        for (int i = 0; i < 4; i++)
-            arquivoImagem.get();
-
-
-        //Funcao para ler largura
-        cabecalhoImagem.largura = 0;
-
-        for (int i = 0; i < 4; i++)
-        {
-            cabecalhoImagem.largura +=
-                arquivoImagem.get() << (i * 8);
-        }
-
-        //Funcao de leitura da altura
-        cabecalhoImagem.altura = 0;
-
-        for (int i = 0; i < 4; i++)
-        {
-            cabecalhoImagem.altura +=
-                arquivoImagem.get() << (i * 8);
-        }
-
-
-        // pula planos e bits por pixel
-        for (int i = 0; i < 4; i++)
-            arquivoImagem.get();
-
-
-        // pula o restante do cabecalho
-        for (int i = 0; i < 24; i++)
-            arquivoImagem.get();
-
-
-        //Tranformando a imagem original
-        imagemOriginal.largura =
-            cabecalhoImagem.largura;
-
-        imagemOriginal.altura =
-            cabecalhoImagem.altura;
-
-
-        imagemOriginal.pixels.resize(
-            imagemOriginal.largura *
-            imagemOriginal.altura *
-            3
-        );
-
-
-    //Lendo os pixels
-        for (int i = 0; i < imagemOriginal.pixels.size(); i++)
-        {
-            imagemOriginal.pixels[i] =
-                arquivoImagem.get();
-        }
-
-
-        arquivoImagem.close();
+    if (comando1 == "Abra"){
+        imagemOriginal = AbrirImagem(json, imagemOriginal);
     }
 
-    //Funcao para recorte
-    if (comando == "Recorta")
-    {
-        ImagemInterna imagemRecortada = corta(
-            imagemOriginal,
+    if (comando2 == "Recorta"){
+        imagemRecortada = Corta(
+            imagemOriginal, //arquivo
             100,   // x
             50,    // y
             300,   // largura
             150    // altura
-        );
+            );
     }
-    if (comando == "GravaBMP")
-    {
+
+    if (comando3 == "GravaBMP"){
         GravaBMP(imagemRecortada, "recorte.bmp");
     }
 
-
     // Comando ConvGray
-    if (comando == "ConvGray")
-    {
-        ImagemInterna imagemCinza = imagemRecortada;
-
-        imagemCinza = ConvGray(imagemCinza);
+    if (comando4 == "ConvGray"){
+        imagemCinza = imagemRecortada;
+        imagemCinza = ConvGrey(imagemCinza);
     }
-
 
     // Comando GravaBMP novamente
-    if (comando == "GravaBMP")
-    {
+    if (comando5 == "GravaBMP"){
         GravaBMP(imagemCinza, "recorte_cinza.bmp");
     }
+
+
 
     return 0;
 }
