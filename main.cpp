@@ -103,10 +103,10 @@ string LerArquivoJson(string caminhoArquivo)
 {
     ifstream arquivo(caminhoArquivo);
 
-    if (!arquivo.is_open()){
+    if (!arquivo.is_open()) {
         cerr << "Erro: arquivo nao encontrado" << endl;
+        exit(1);
     }
-
     string conteudo = "";
     string linha;
 
@@ -297,17 +297,22 @@ int main()
     string json = LerArquivoJson("comandos.mpi");
 
     //separar os valores de cmd´s do arquivo json
-    string comando = PegarValorJson(json, "cmd");
+    string comando1 = PegarValorJson(json, "cmd1");
+    string comando2 = PegarValorJson(json, "cmd2");
+    string comando3 = PegarValorJson(json, "cmd3");
+    string comando4 = PegarValorJson(json, "cmd4");
+    string comando5 = PegarValorJson(json, "cmd5");
 
     ImagemInterna imagemOriginal;
+    ImagemInterna imagemRecortada;
+    ImagemInterna imagemCinza;
 
     //Abrindo a imagem
-    if (comando == "Abra"){
+    if (comando1 == "Abra"){
         imagemOriginal = AbrirImagem(json, imagemOriginal);
     }
 
-    if (comando == "Recorta"){
-        ImagemInterna imagemRecortada;
+    if (comando2 == "Recorta"){
         imagemRecortada = Corta(
             imagemOriginal, //arquivo
             100,   // x
@@ -317,20 +322,22 @@ int main()
             );
     }
 
-    if (comando == "GravaBMP"){
+    if (comando3 == "GravaBMP"){
         GravaBMP(imagemRecortada, "recorte.bmp");
     }
 
     // Comando ConvGray
-    if (comando == "ConvGray"){
-        ImagemInterna imagemCinza = imagemRecortada;
+    if (comando4 == "ConvGray"){
+        imagemCinza = imagemRecortada;
         imagemCinza = ConvGrey(imagemCinza);
     }
 
     // Comando GravaBMP novamente
-    if (comando == "GravaBMP"){
+    if (comando5 == "GravaBMP"){
         GravaBMP(imagemCinza, "recorte_cinza.bmp");
     }
+
+
 
     return 0;
 }
