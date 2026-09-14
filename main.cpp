@@ -4,6 +4,7 @@
 #include <locale>
 #include <vector>
 #include <cstdint>
+#include <algorithm>
 
 using namespace std;
 
@@ -147,10 +148,22 @@ ImagemInterna Corta(ImagemInterna original, int x, int y, int novaLargura, int n
     return recorte;
 }
 
+// funcao para converter um vetor json "[x, y]" em dois inteiros
+void ParseVetor(string valor, int &a, int &b){
+    valor.erase(remove(valor.begin(), valor.end(), '['), valor.end());
+    valor.erase(remove(valor.begin(), valor.end(), ']'), valor.end());
+    valor.erase(remove(valor.begin(), valor.end(), ' '), valor.end());
+
+    int virgula = valor.find(',');
+
+    a = stoi(valor.substr(0, virgula));
+    b = stoi(valor.substr(virgula + 1));
+}
+
 //funcao para abrir a imagem
 ImagemInterna AbrirImagem(string json, ImagemInterna imagemOriginal){
-
-    string nomeArquivo = PegarValorJson(json, "arq");
+    
+    string nomeArquivo = PegarValorJson(json, "arq1");
 
     ifstream arquivoImagem;
     arquivoImagem.open(nomeArquivo, ios::in | ios::binary);
@@ -160,52 +173,43 @@ ImagemInterna AbrirImagem(string json, ImagemInterna imagemOriginal){
         exit(1);
     }
 
-    //leitura dos cabecalhos
-    CabecalhoBMP cabecalhoBMP;
-    CabecalhoImagem cabecalhoImagem;
+    // le o offset real dos dados de pixel (bytes 10-13 do arquivo)
+    arquivoImagem.seekg(10);
+    uint32_t offsetDados = 0;
+    for (int i = 0; i < 4; i++)
+        offsetDados += (unsigned char)arquivoImagem.get() << (i * 8);
 
-    //pula os 14 bytes do primeiro cabecalho
-    for (int i = 0; i < 14; i++){
-        arquivoImagem.get();
-    }
-    //pula o tamanho do segundo cabecalho
-    for (int i = 0; i < 4; i++){
-        arquivoImagem.get();
-    }
+    // le largura (bytes 18-21) e altura (bytes 22-25), independente do tamanho do cabecalho DIB
+    arquivoImagem.seekg(18);
+    int32_t largura = 0;
+    int32_t alturaBruta = 0;
+    for (int i = 0; i < 4; i++) largura     += (unsigned char)arquivoImagem.get() << (i * 8);
+    for (int i = 0; i < 4; i++) alturaBruta += (unsigned char)arquivoImagem.get() << (i * 8);
 
-    //funcao para ler a largura
-    cabecalhoImagem.largura = 0;
+    bool armazenadaDeBaixoParaCima = (alturaBruta > 0);
+    int altura = abs(alturaBruta);
 
-    for (int i = 0; i < 4; i++){
-        cabecalhoImagem.largura += arquivoImagem.get() << (i * 8);
-    }
+    // debug: descomente se quiser conferir os valores lidos
+    // cerr << "offset=" << offsetDados << " largura=" << largura << " altura=" << altura << endl;
 
-    //funcao para ler a altura
-    cabecalhoImagem.altura = 0;
+    imagemOriginal.largura = largura;
+    imagemOriginal.altura = altura;
+    imagemOriginal.pixels.resize((size_t)largura * altura * 3);
 
-    for (int i = 0; i < 4; i++){
-        cabecalhoImagem.altura += arquivoImagem.get() << (i * 8);
-    }
+    int larguraBytes = largura * 3;
+    int padding = (4 - (larguraBytes % 4)) % 4;
 
-    //pula planos e bits por pixel
-    for (int i = 0; i < 4; i++){
-        arquivoImagem.get();
-    }
+    arquivoImagem.seekg(offsetDados);
 
-    //pula o restante do cabecalho
-    for (int i = 0; i < 24; i++){
-        arquivoImagem.get();
-    }
+    for (int linha = 0; linha < altura; linha++){
+        // arquivo BMP "normal" guarda a PRIMEIRA linha lida como a ULTIMA linha da imagem (de baixo pra cima)
+        int linhaDestino = armazenadaDeBaixoParaCima ? (altura - 1 - linha) : linha;
+        int inicio = linhaDestino * larguraBytes;
 
-    //Tranformando a imagem original
-    imagemOriginal.largura = cabecalhoImagem.largura;
-    imagemOriginal.altura = cabecalhoImagem.altura;
+        for (int i = 0; i < larguraBytes; i++)
+            imagemOriginal.pixels[inicio + i] = arquivoImagem.get();
 
-    imagemOriginal.pixels.resize(imagemOriginal.largura * imagemOriginal.altura * 3);
-
-    //Lendo os pixels
-    for (int i = 0; i < imagemOriginal.pixels.size(); i++){
-        imagemOriginal.pixels[i] = arquivoImagem.get();
+        arquivoImagem.ignore(padding); // pula o padding da linha, se houver
     }
 
     arquivoImagem.close();
@@ -289,8 +293,7 @@ void GravaBMP(ImagemInterna imagem, string nomeArquivo){
     cerr << "Arquivo " << nomeArquivo << " gravado com sucesso." << endl;
 }
 
-int main()
-{
+int main(){
     setlocale(LC_ALL, "portuguese");
 
     //leitura do json
@@ -306,6 +309,14 @@ int main()
     ImagemInterna imagemOriginal;
     ImagemInterna imagemRecortada;
     ImagemInterna imagemCinza;
+
+    int x, y, largura, altura;
+
+    string iniStr = PegarValorJson(json, "ini");
+    string tamStr = PegarValorJson(json, "tam");
+
+    ParseVetor(iniStr, x, y);
+    ParseVetor(tamStr, largura, altura);
 
     //Abrindo a imagem
     if (comando1 == "Abra"){
@@ -336,8 +347,6 @@ int main()
     if (comando5 == "GravaBMP"){
         GravaBMP(imagemCinza, "recorte_cinza.bmp");
     }
-
-
 
     return 0;
 }
