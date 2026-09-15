@@ -182,6 +182,18 @@ string ColocarBMP(string nomeArquivo)
     return nomeArquivo;
 }
 
+// funcao para converter um vetor json "[x, y]" em dois inteiros
+void ParseVetor(string valor, int &a, int &b){
+    valor.erase(remove(valor.begin(), valor.end(), '['), valor.end());
+    valor.erase(remove(valor.begin(), valor.end(), ']'), valor.end());
+    valor.erase(remove(valor.begin(), valor.end(), ' '), valor.end());
+
+    int virgula = valor.find(',');
+
+    a = stoi(valor.substr(0, virgula));
+    b = stoi(valor.substr(virgula + 1));
+}
+
 //funcao para abrir a imagem
 ImagemInterna AbrirImagem(string json, ImagemInterna imagemOriginal){
 
@@ -190,6 +202,8 @@ ImagemInterna AbrirImagem(string json, ImagemInterna imagemOriginal){
 
     //aplicando a funcao caso precise
     nomeArquivo = ColocarBMP(nomeArquivo);
+
+    string nomeArquivo = PegarValorJson(json, "arq1");
 
     ifstream arquivoImagem;
     arquivoImagem.open(nomeArquivo, ios::in | ios::binary);
@@ -203,6 +217,11 @@ ImagemInterna AbrirImagem(string json, ImagemInterna imagemOriginal){
    // Le o cabecalho do arquivo BMP
 CabecalhoBMP cabecalhoArquivo;
 CabecalhoImagem cabecalhoImagem;
+    // le o offset real dos dados de pixel (bytes 10-13 do arquivo)
+    arquivoImagem.seekg(10);
+    uint32_t offsetDados = 0;
+    for (int i = 0; i < 4; i++)
+        offsetDados += (unsigned char)arquivoImagem.get() << (i * 8);
 
 // Volta para o inicio do arquivo
 arquivoImagem.seekg(0);
@@ -343,10 +362,39 @@ for (int linha = 0; linha < altura; linha++)
         imagemOriginal.pixels[inicio + i] =
             arquivoImagem.get();
     }
+    // le largura (bytes 18-21) e altura (bytes 22-25), independente do tamanho do cabecalho DIB
+    arquivoImagem.seekg(18);
+    int32_t largura = 0;
+    int32_t alturaBruta = 0;
+    for (int i = 0; i < 4; i++) largura     += (unsigned char)arquivoImagem.get() << (i * 8);
+    for (int i = 0; i < 4; i++) alturaBruta += (unsigned char)arquivoImagem.get() << (i * 8);
 
-    // pula o padding no final da linha se tiver
-    arquivoImagem.ignore(padding);
-}
+    bool armazenadaDeBaixoParaCima = (alturaBruta > 0);
+    int altura = abs(alturaBruta);
+
+    // debug: descomente se quiser conferir os valores lidos
+    // cerr << "offset=" << offsetDados << " largura=" << largura << " altura=" << altura << endl;
+
+    imagemOriginal.largura = largura;
+    imagemOriginal.altura = altura;
+    imagemOriginal.pixels.resize((size_t)largura * altura * 3);
+
+    int larguraBytes = largura * 3;
+    int padding = (4 - (larguraBytes % 4)) % 4;
+
+    arquivoImagem.seekg(offsetDados);
+
+    for (int linha = 0; linha < altura; linha++){
+        // arquivo BMP "normal" guarda a PRIMEIRA linha lida como a ULTIMA linha da imagem (de baixo pra cima)
+        int linhaDestino = armazenadaDeBaixoParaCima ? (altura - 1 - linha) : linha;
+        int inicio = linhaDestino * larguraBytes;
+
+        for (int i = 0; i < larguraBytes; i++)
+            imagemOriginal.pixels[inicio + i] = arquivoImagem.get();
+
+        arquivoImagem.ignore(padding); // pula o padding da linha, se houver
+    }
+
     arquivoImagem.close();
 
     return imagemOriginal;
