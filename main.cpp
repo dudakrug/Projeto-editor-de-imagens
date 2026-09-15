@@ -417,7 +417,8 @@ void GravaBMP(ImagemInterna imagem, string nomeArquivo){
         arquivoImagem.put(cabecalho[i]);
 
     // escreve os pixels
-    for (int linha = 0; linha < imagem.altura; linha++)
+    //arruma por largura para nao inverter verticalmente
+    for (int linha = imagem.altura - 1; linha >= 0; linha--)
     {
         for (int i = 0; i < larguraBytes; i++)
             arquivoImagem.put(imagem.pixels[linha * larguraBytes + i]);
@@ -592,7 +593,7 @@ void GravaJson(ImagemInterna imagem, string nomeArquivo, char canal)
 int main(int argc, char *argv[]){
         setlocale(LC_ALL, "portuguese");
 
-        string nomeArquivoMPI;
+        /*string nomeArquivoMPI;
 
         // Se o usuario informou o nome do arquivo
         //argc conta os argumentos, nesse caso o executavel + o arquivo sendo lido
@@ -612,10 +613,13 @@ int main(int argc, char *argv[]){
         {
             cerr << "Erro: nenhum arquivo MPI foi informado." << endl;
             return 1;
-        }
+        }*/
+    string nomeArquivoMPI = "comandos.mpi";
 
         // Le o arquivo MPI
         string json = LerArquivoJson(nomeArquivoMPI);
+
+
 
     //separar os valores de cmd´s do arquivo json
     string comando1 = PegarValorJson(json, "cmd1");
