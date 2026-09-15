@@ -6,9 +6,12 @@ Este projeto é uma ferramenta desenvolvida em C++ para a leitura, processamento
 ## Demonstração de Funcionamento
 
 Cabeçalho Lido no Terminal
+
 ![Cabeçalho BMP Impresso no Terminal](assets/cabecalho_terminal.png)
 
+
 Execução em Vídeo
+
 ![Demonstração do Código em Execução](assets/editor_imagens.gif)
 
 
@@ -16,42 +19,38 @@ Execução em Vídeo
 
 Para compilar e executar o projeto em sua máquina local, você precisará ter instalado:
 
-    Compilador C++: GCC / G++ (suporte a C++11 ou superior) ou MSVC.
+- Compilador C++: GCC / G++ (suporte a C++11 ou superior) ou MSVC.
 
-    Ambiente CLI: Terminal Linux/macOS ou PowerShell/CMD no Windows.
+- Ambiente CLI: Terminal Linux/macOS ou PowerShell/CMD no Windows.
 
-    Git: Para clonar e versionar o repositório.
+- Git: Para clonar e versionar o repositório.
 
 ### Como Instalar e Rodar o Projeto
 
 Siga o passo a passo abaixo para compilar e testar o programa em seu ambiente local:
 
-    Clonar o repositório:
-    Bash
+Clonar o repositório:
 
     git clone https://github.com/seu-usuario/seu-repositorio.git
     cd seu-repositorio
 
-    Preparar os arquivos de entrada:
+Preparar os arquivos de entrada:
 
         Certifique-se de ter um arquivo comandos.mpi com as chaves e comandos necessários no mesmo diretório do executável.
 
         Coloque a imagem BMP de entrada (24 bits) indicada no arquivo de comandos dentro do mesmo diretório.
 
-    Compilar o código:
-    Bash
+Compilar o código:
 
     g++ -std=c++11 main.cpp -o processador_bmp
 
-    Executar a aplicação:
+Executar a aplicação:
 
-        No Linux/macOS:
-        Bash
+No Linux/macOS:
 
         ./processador_bmp
 
-        No Windows:
-        Bash
+No Windows:
 
         .\processador_bmp.exe
 
@@ -61,16 +60,16 @@ Encontrou algum erro, bug na manipulação dos bytes de padding ou falha na leit
 
 ### Futuras Melhorias
 
-    Implementar suporte nativo a leitores/parsers de JSON completos via bibliotecas externas.
+- Implementar suporte nativo a leitores/parsers de JSON completos via bibliotecas externas.
 
-    Adicionar suporte a arquivos BMP comprimidos e com profundidades de bits diferentes (8-bit, 16-bit, 32-bit).
+- Adicionar suporte a arquivos BMP comprimidos e com profundidades de bits diferentes (8-bit, 16-bit, 32-bit).
 
-    Permitir a passagem do caminho do arquivo .mpi diretamente via argumentos da linha de comando (argc e argv).
+- Permitir a passagem do caminho do arquivo .mpi diretamente via argumentos da linha de comando (argc e argv).
 
-    Otimizar o cálculo do padding e a alocação de memória para imagens de alta resolução.
+- Otimizar o cálculo do padding e a alocação de memória para imagens de alta resolução.
 
 ### Autores
 
-    Eduarda Krug do Amaral - Github: dudakrug | LinkedIn: eduardakrug | Email: dudakrugamaral@gmail.com
+Eduarda Krug do Amaral - Github: dudakrug | LinkedIn: eduardakrug | Email: dudakrugamaral@gmail.com
 
-    Eduardo de Souza Guerreiro - GitHub: guerreiro-dd | LinkedIn: eduardoguerreiro | Email: eduardoguerreirodog@gmail.com
+Eduardo de Souza Guerreiro - GitHub: guerreiro-dd | LinkedIn: eduardoguerreiro | Email: eduardoguerreirodog@gmail.com
