@@ -1,7 +1,7 @@
 [
     {
         "cmd1": "Abra",
-        "arq": "bolas_coloridas.bmp"
+        "arq1": "Teste1.bmp"
     },
     {
         "cmd2": "Recorta",
@@ -10,13 +10,18 @@
     },
     {
         "cmd3": "GravaBMP",
-        "arq": "recorte.bmp"
+        "arq3": "recorte.bmp"
     },
     {
         "cmd4": "ConvGray"
     },
     {
         "cmd5": "GravaBMP",
-        "arq": "recorte_cinza.bmp"
+        "arq5": "recorte_cinza.bmp"
+    },
+    {
+        "cmd6": "GravaJson",
+        "arq6": "recorte_cinza",
+        "canal": "A"
     }
 ]
